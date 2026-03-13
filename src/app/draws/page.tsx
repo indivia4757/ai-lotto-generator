@@ -12,6 +12,7 @@ export default function DrawsPage() {
   const [loading, setLoading] = useState(true);
   const [backfilling, setBackfilling] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const fetchDraws = useCallback(async () => {
     try {
@@ -28,6 +29,20 @@ export default function DrawsPage() {
   useEffect(() => {
     fetchDraws();
   }, [fetchDraws]);
+
+  async function handleImport() {
+    setImporting(true);
+    try {
+      const res = await fetch("/api/admin/import-draws", { method: "POST" });
+      const data = await res.json();
+      alert(data.message || data.error);
+      fetchDraws();
+    } catch {
+      alert("가져오기 실패");
+    } finally {
+      setImporting(false);
+    }
+  }
 
   async function handleSeed() {
     setSeeding(true);
@@ -67,11 +82,11 @@ export default function DrawsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">당첨 결과</h1>
         <div className="flex gap-2">
-          <Button onClick={handleSeed} disabled={seeding} variant="outline" size="sm">
-            {seeding ? "삽입 중..." : "샘플 데이터"}
+          <Button onClick={handleImport} disabled={importing} size="sm">
+            {importing ? "가져오는 중..." : "실제 데이터 가져오기"}
           </Button>
           <Button onClick={handleBackfill} disabled={backfilling} variant="outline" size="sm">
-            {backfilling ? "수집 중..." : "전체 수집"}
+            {backfilling ? "수집 중..." : "동행복권 수집"}
           </Button>
         </div>
       </div>
