@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createServerClient } from "@/lib/supabase/server";
+import db from "@/lib/db";
 
 const createSchema = z.object({
   name: z.string().min(1).max(50),
@@ -10,14 +10,11 @@ const createSchema = z.object({
 });
 
 export async function GET() {
-  const supabase = createServerClient();
-  const { data, error } = await supabase
-    .from("recipients")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const recipients = db
+    .prepare("SELECT * FROM recipients ORDER BY created_at DESC")
+    .all();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ recipients: data });
+  return NextResponse.json({ recipients });
 }
 
 export async function POST(request: NextRequest) {
@@ -28,15 +25,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = createServerClient();
-  const { data, error } = await supabase
-    .from("recipients")
-    .insert(parsed.data)
-    .select()
-    .single();
+  const { name, nickname, contact, memo } = parsed.data;
+  const result = db
+    .prepare(
+      "INSERT INTO recipients (name, nickname, contact, memo) VALUES (?, ?, ?, ?)"
+    )
+    .run(name, nickname ?? null, contact ?? null, memo ?? null);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ recipient: data }, { status: 201 });
+  const recipient = db
+    .prepare("SELECT * FROM recipients WHERE id = ?")
+    .get(result.lastInsertRowid);
+
+  return NextResponse.json({ recipient }, { status: 201 });
 }
 
 export async function DELETE(request: NextRequest) {
@@ -44,9 +44,6 @@ export async function DELETE(request: NextRequest) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-  const supabase = createServerClient();
-  const { error } = await supabase.from("recipients").delete().eq("id", id);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  db.prepare("DELETE FROM recipients WHERE id = ?").run(id);
   return NextResponse.json({ success: true });
 }

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import db from "@/lib/db";
 
-// 최근 주요 회차 시드 데이터 (실제 당첨번호)
 const SEED_DATA = [
   { draw_no: 1, draw_date: "2002-12-07", num1: 10, num2: 23, num3: 29, num4: 33, num5: 37, num6: 40, bonus_num: 16, total_sales: 0, first_prize: 0, first_winners: 0 },
   { draw_no: 100, draw_date: "2004-11-13", num1: 4, num2: 7, num3: 12, num4: 14, num5: 22, num6: 38, bonus_num: 43, total_sales: 0, first_prize: 0, first_winners: 0 },
@@ -31,18 +30,25 @@ const SEED_DATA = [
 ];
 
 export async function POST() {
-  const supabase = createServerClient();
-  let inserted = 0;
+  const insert = db.prepare(
+    `INSERT OR REPLACE INTO draw_results
+     (draw_no, draw_date, num1, num2, num3, num4, num5, num6, bonus_num, total_sales, first_prize, first_winners)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
 
-  for (const row of SEED_DATA) {
-    const { error } = await supabase
-      .from("draw_results")
-      .upsert(row, { onConflict: "draw_no" });
-    if (!error) inserted++;
-  }
+  const seed = db.transaction(() => {
+    for (const row of SEED_DATA) {
+      insert.run(
+        row.draw_no, row.draw_date,
+        row.num1, row.num2, row.num3, row.num4, row.num5, row.num6,
+        row.bonus_num, row.total_sales, row.first_prize, row.first_winners
+      );
+    }
+  });
+  seed();
 
   return NextResponse.json({
-    message: `시드 데이터 삽입 완료: ${inserted}/${SEED_DATA.length}건`,
-    inserted,
+    message: `시드 데이터 삽입 완료: ${SEED_DATA.length}건`,
+    inserted: SEED_DATA.length,
   });
 }

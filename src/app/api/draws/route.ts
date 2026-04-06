@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import db from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -7,13 +7,12 @@ export async function GET(request: NextRequest) {
   const page = Math.max(Number(searchParams.get("page") || 1), 1);
   const offset = (page - 1) * limit;
 
-  const supabase = createServerClient();
-  const { data, error, count } = await supabase
-    .from("draw_results")
-    .select("*", { count: "exact" })
-    .order("draw_no", { ascending: false })
-    .range(offset, offset + limit - 1);
+  const draws = db
+    .prepare("SELECT * FROM draw_results ORDER BY draw_no DESC LIMIT ? OFFSET ?")
+    .all(limit, offset);
+  const { total } = db
+    .prepare("SELECT COUNT(*) as total FROM draw_results")
+    .get() as { total: number };
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ draws: data, total: count, page, limit });
+  return NextResponse.json({ draws, total, page, limit });
 }

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAlgorithm, getAllAlgorithms } from "@/lib/algorithms";
-import { createServerClient } from "@/lib/supabase/server";
+import db from "@/lib/db";
+import type { DrawResult } from "@/lib/db/types";
 
 const schema = z.object({
   algorithmSlug: z.string(),
@@ -26,15 +27,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 최근 당첨 결과 가져오기
-  const supabase = createServerClient();
-  const { data: history } = await supabase
-    .from("draw_results")
-    .select("*")
-    .order("draw_no", { ascending: false })
-    .limit(100);
+  const history = db
+    .prepare("SELECT * FROM draw_results ORDER BY draw_no DESC LIMIT 100")
+    .all() as DrawResult[];
 
-  const sets = algorithm.generate(history || [], count);
+  const sets = algorithm.generate(history, count);
+
+  // Record generation session
+  const latestDrawNo = history.length > 0 ? history[0].draw_no + 1 : 1;
+  db.prepare(
+    "INSERT INTO generation_sessions (target_draw_no, algorithm_slug, total_sets) VALUES (?, ?, ?)"
+  ).run(latestDrawNo, algorithmSlug, count);
 
   return NextResponse.json({
     algorithm: { slug: algorithm.slug, name: algorithm.name },

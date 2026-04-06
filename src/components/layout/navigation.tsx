@@ -13,7 +13,7 @@ const navItems = [
   { href: "/recipients", label: "추천 대상" },
   { href: "/recommendations", label: "추천 기록" },
   { href: "/stats", label: "통계" },
-  { href: "/analysis", label: "AI 분석" },
+  { href: "/analysis", label: "CLI 분석" },
 ];
 
 export function Navigation() {

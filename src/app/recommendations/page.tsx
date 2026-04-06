@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LottoBallSet } from "@/components/lotto/lotto-ball";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Recommendation } from "@/lib/supabase/types";
+import type { Recommendation } from "@/lib/db/types";
 
 function getRankBadge(rank: number | null | undefined) {
   if (!rank) return null;

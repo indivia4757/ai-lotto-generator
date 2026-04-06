@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import type { Recipient } from "@/lib/supabase/types";
+import type { Recipient } from "@/lib/db/types";
 
 export default function RecipientsPage() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);

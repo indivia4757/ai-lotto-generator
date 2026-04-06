@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
-import type { DrawResult } from "@/lib/supabase/types";
+import db from "@/lib/db";
+import type { DrawResult } from "@/lib/db/types";
 
 function getNumbers(d: DrawResult): number[] {
   return [d.num1, d.num2, d.num3, d.num4, d.num5, d.num6];
@@ -11,14 +11,11 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") || "frequency";
   const limit = Math.min(Number(searchParams.get("limit") || 100), 500);
 
-  const supabase = createServerClient();
-  const { data: draws } = await supabase
-    .from("draw_results")
-    .select("*")
-    .order("draw_no", { ascending: false })
-    .limit(limit);
+  const draws = db
+    .prepare("SELECT * FROM draw_results ORDER BY draw_no DESC LIMIT ?")
+    .all(limit) as DrawResult[];
 
-  if (!draws || draws.length === 0) {
+  if (draws.length === 0) {
     return NextResponse.json({ data: [], type });
   }
 
@@ -61,7 +58,6 @@ export async function GET(request: NextRequest) {
         drawNo: d.draw_no,
         sum: getNumbers(d).reduce((a, b) => a + b, 0),
       }));
-      // 구간별 분포
       const ranges: Record<string, number> = {};
       for (const { sum } of sums) {
         const range = `${Math.floor(sum / 20) * 20}-${Math.floor(sum / 20) * 20 + 19}`;

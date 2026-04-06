@@ -1,35 +1,3 @@
-export interface Database {
-  public: {
-    Tables: {
-      draw_results: {
-        Row: DrawResult;
-        Insert: Omit<DrawResult, "id" | "created_at">;
-        Update: Partial<Omit<DrawResult, "id">>;
-      };
-      recipients: {
-        Row: Recipient;
-        Insert: Omit<Recipient, "id" | "created_at">;
-        Update: Partial<Omit<Recipient, "id">>;
-      };
-      algorithms: {
-        Row: Algorithm;
-        Insert: Omit<Algorithm, "id" | "created_at">;
-        Update: Partial<Omit<Algorithm, "id">>;
-      };
-      recommendations: {
-        Row: Recommendation;
-        Insert: Omit<Recommendation, "id" | "created_at">;
-        Update: Partial<Omit<Recommendation, "id">>;
-      };
-      match_results: {
-        Row: MatchResult;
-        Insert: Omit<MatchResult, "id" | "created_at">;
-        Update: Partial<Omit<MatchResult, "id">>;
-      };
-    };
-  };
-}
-
 export interface DrawResult {
   id: number;
   draw_no: number;
@@ -86,5 +54,42 @@ export interface MatchResult {
   matched_bonus: boolean;
   rank: number | null;
   created_at: string;
+  recommendation?: Recommendation;
+}
+
+export interface GenerationSession {
+  id: number;
+  target_draw_no: number;
+  algorithm_slug: string;
+  total_sets: number;
+  memo: string | null;
+  created_at: string;
+}
+
+export interface WinningHistory {
+  id: number;
+  draw_no: number;
+  total_recommendations: number;
+  rank1_count: number;
+  rank2_count: number;
+  rank3_count: number;
+  rank4_count: number;
+  rank5_count: number;
+  none_count: number;
+  created_at: string;
+}
+
+export interface Winner {
+  id: number;
+  recipient_id: number | null;
+  recommendation_id: number;
+  match_result_id: number;
+  draw_no: number;
+  rank: number;
+  prize_amount: number | null;
+  claimed: boolean;
+  memo: string | null;
+  created_at: string;
+  recipient?: Recipient;
   recommendation?: Recommendation;
 }

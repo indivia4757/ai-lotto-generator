@@ -1,49 +1,41 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import db from "@/lib/db";
 import { fetchDrawResult, estimateLatestDrawNo } from "@/lib/dhlottery/client";
 
 export async function POST() {
-  const supabase = createServerClient();
   const latestEstimate = estimateLatestDrawNo();
 
-  // 이미 저장된 최신 회차 확인
-  const { data: existing } = await supabase
-    .from("draw_results")
-    .select("draw_no")
-    .order("draw_no", { ascending: false })
-    .limit(1);
+  const existing = db
+    .prepare("SELECT draw_no FROM draw_results ORDER BY draw_no DESC LIMIT 1")
+    .get() as { draw_no: number } | undefined;
 
-  const startFrom = existing && existing.length > 0 ? existing[0].draw_no + 1 : 1;
+  const startFrom = existing ? existing.draw_no + 1 : 1;
   let inserted = 0;
   let failed = 0;
+
+  const insert = db.prepare(
+    `INSERT OR REPLACE INTO draw_results
+     (draw_no, draw_date, num1, num2, num3, num4, num5, num6, bonus_num, total_sales, first_prize, first_winners)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
 
   for (let drawNo = startFrom; drawNo <= latestEstimate; drawNo++) {
     const result = await fetchDrawResult(drawNo);
     if (!result) {
       failed++;
-      if (failed > 3) break; // 3연속 실패 시 중단
+      if (failed > 3) break;
       continue;
     }
     failed = 0;
 
-    const { error } = await supabase.from("draw_results").upsert({
-      draw_no: result.drwNo,
-      draw_date: result.drwNoDate,
-      num1: result.drwtNo1,
-      num2: result.drwtNo2,
-      num3: result.drwtNo3,
-      num4: result.drwtNo4,
-      num5: result.drwtNo5,
-      num6: result.drwtNo6,
-      bonus_num: result.bnusNo,
-      total_sales: result.totSellamnt,
-      first_prize: result.firstWinamnt,
-      first_winners: result.firstPrzwnerCo,
-    }, { onConflict: "draw_no" });
+    insert.run(
+      result.drwNo, result.drwNoDate,
+      result.drwtNo1, result.drwtNo2, result.drwtNo3,
+      result.drwtNo4, result.drwtNo5, result.drwtNo6,
+      result.bnusNo, result.totSellamnt, result.firstWinamnt, result.firstPrzwnerCo
+    );
+    inserted++;
 
-    if (!error) inserted++;
-
-    // API 부하 방지
     await new Promise((r) => setTimeout(r, 200));
   }
 

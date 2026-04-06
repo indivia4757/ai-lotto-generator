@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LottoBallSet } from "@/components/lotto/lotto-ball";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { DrawResult } from "@/lib/supabase/types";
+import type { DrawResult } from "@/lib/db/types";
 
 export default function DrawsPage() {
   const [draws, setDraws] = useState<DrawResult[]>([]);

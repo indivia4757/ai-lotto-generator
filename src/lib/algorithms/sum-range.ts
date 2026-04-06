@@ -1,4 +1,4 @@
-import type { DrawResult } from "@/lib/supabase/types";
+import type { DrawResult } from "@/lib/db/types";
 import type { LottoAlgorithm } from "./types";
 import { generateWithFilter, sumNumbers } from "./filters";
 

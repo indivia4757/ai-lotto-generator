@@ -1,4 +1,4 @@
-import type { DrawResult } from "@/lib/supabase/types";
+import type { DrawResult } from "@/lib/db/types";
 
 export interface LottoAlgorithm {
   slug: string;

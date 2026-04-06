@@ -1,4 +1,4 @@
-import type { DrawResult, Recommendation } from "@/lib/supabase/types";
+import type { DrawResult, Recommendation } from "@/lib/db/types";
 
 export interface MatchingResult {
   recommendationId: number;
