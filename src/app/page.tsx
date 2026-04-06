@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LottoBallSet } from "@/components/lotto/lotto-ball";
+import { useI18n } from "@/lib/i18n/context";
 
 interface AiResult {
   sets: number[][];
@@ -29,6 +30,7 @@ interface AiResult {
 }
 
 export default function HomePage() {
+  const { t } = useI18n();
   const [result, setResult] = useState<AiResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,13 +45,13 @@ export default function HomePage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "분석에 실패했습니다.");
+        setError(data.error || t("home.error"));
         return;
       }
 
       setResult(data);
     } catch {
-      setError("서버에 연결할 수 없습니다.");
+      setError(t("home.errorServer"));
     } finally {
       setLoading(false);
     }
@@ -59,22 +61,18 @@ export default function HomePage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <section className="text-center space-y-3 pt-8">
         <h1 className="text-4xl font-bold tracking-tight">
-          AI 로또 번호 추천
+          {t("home.title")}
         </h1>
-        <p className="text-muted-foreground text-lg">
-          전체 당첨 히스토리를 종합 분석하여
-          <br />
-          최적의 번호 조합을 추천합니다.
+        <p className="text-muted-foreground text-lg whitespace-pre-line">
+          {t("home.subtitle")}
         </p>
       </section>
 
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">AI 분석 추천</CardTitle>
-          <CardDescription>
-            빈도, 트렌드, 소외번호, 동반출현, 끝수, 구간균형, 주기성
-            <br />
-            7가지 관점의 종합 앙상블 분석
+          <CardTitle className="text-xl">{t("home.cardTitle")}</CardTitle>
+          <CardDescription className="whitespace-pre-line">
+            {t("home.cardDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center">
@@ -87,10 +85,10 @@ export default function HomePage() {
             {loading ? (
               <span className="flex items-center gap-2">
                 <span className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                분석 중...
+                {t("home.loading")}
               </span>
             ) : (
-              "번호 추천 받기"
+              t("home.button")
             )}
           </Button>
         </CardContent>
@@ -109,9 +107,11 @@ export default function HomePage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>{result.targetDraw}회차 추천 번호</span>
+                <span>
+                  {t("home.resultTitle", { draw: result.targetDraw })}
+                </span>
                 <span className="text-sm font-normal text-muted-foreground">
-                  전체 {result.analyzedDraws}회 분석
+                  {t("home.analyzedDraws", { count: result.analyzedDraws })}
                 </span>
               </CardTitle>
             </CardHeader>
@@ -123,7 +123,7 @@ export default function HomePage() {
                   </span>
                   <LottoBallSet numbers={set} />
                   <span className="text-xs text-muted-foreground ml-auto">
-                    합계: {set.reduce((a, b) => a + b, 0)}
+                    {t("home.sum")}: {set.reduce((a, b) => a + b, 0)}
                   </span>
                 </div>
               ))}
@@ -132,7 +132,9 @@ export default function HomePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">분석 요약</CardTitle>
+              <CardTitle className="text-base">
+                {t("home.analysisSummary")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm leading-relaxed">{result.analysis}</p>
@@ -154,43 +156,37 @@ export default function HomePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">분석 상세</CardTitle>
+              <CardTitle className="text-base">
+                {t("home.analysisDetail")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <div>
-                <h4 className="font-medium mb-1">
-                  전체 빈도 TOP 10
-                </h4>
+                <h4 className="font-medium mb-1">{t("home.freqTop")}</h4>
                 <p className="text-muted-foreground">
                   {result.details.freqTop
-                    .map((f) => `${f.num}(${f.count}회)`)
+                    .map((f) => `${f.num}(${f.count}${t("home.times")})`)
                     .join(", ")}
                 </p>
               </div>
               <div>
-                <h4 className="font-medium mb-1">
-                  최근 50회 핫 넘버
-                </h4>
+                <h4 className="font-medium mb-1">{t("home.recentHot")}</h4>
                 <p className="text-muted-foreground">
                   {result.details.recentHot
-                    .map((f) => `${f.num}(${f.count}회)`)
+                    .map((f) => `${f.num}(${f.count}${t("home.times")})`)
                     .join(", ")}
                 </p>
               </div>
               <div>
-                <h4 className="font-medium mb-1">
-                  장기 미출현 번호
-                </h4>
+                <h4 className="font-medium mb-1">{t("home.neglected")}</h4>
                 <p className="text-muted-foreground">
                   {result.details.neglected
-                    .map((n) => `${n.num}(${n.gap}회 미출현)`)
+                    .map((n) => `${n.num}(${n.gap}${t("home.missed")})`)
                     .join(", ")}
                 </p>
               </div>
               <div>
-                <h4 className="font-medium mb-1">
-                  동반 출현 TOP 쌍
-                </h4>
+                <h4 className="font-medium mb-1">{t("home.topPairs")}</h4>
                 <p className="text-muted-foreground">
                   {result.details.topPairs
                     .map((p) => `[${p.pair}]`)
@@ -199,13 +195,15 @@ export default function HomePage() {
               </div>
               <div className="flex gap-6">
                 <div>
-                  <h4 className="font-medium mb-1">합계 평균</h4>
+                  <h4 className="font-medium mb-1">{t("home.avgSum")}</h4>
                   <p className="text-muted-foreground">
                     {result.details.avgSum}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-medium mb-1">연번 출현율</h4>
+                  <h4 className="font-medium mb-1">
+                    {t("home.consecutiveRate")}
+                  </h4>
                   <p className="text-muted-foreground">
                     {result.details.consecutiveRate}%
                   </p>

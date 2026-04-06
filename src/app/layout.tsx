@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navigation } from "@/components/layout/navigation";
 import { Toaster } from "@/components/ui/sonner";
+import { I18nProvider } from "@/lib/i18n/context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI 로또 번호 추천",
-  description: "Claude AI 기반 로또 번호 분석 및 추천",
+  title: "AI Lotto",
+  description: "AI-powered lottery number recommendation",
 };
 
 export default function RootLayout({
@@ -25,13 +26,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navigation />
-        <main className="container py-6">{children}</main>
-        <Toaster />
+        <I18nProvider>
+          <Navigation />
+          <main className="container py-6 px-6">{children}</main>
+          <Toaster />
+        </I18nProvider>
       </body>
     </html>
   );
