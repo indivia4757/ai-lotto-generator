@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -34,6 +34,15 @@ export default function HomePage() {
   const [result, setResult] = useState<AiResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasResult = useRef(false);
+
+  // 언어 변경 시 기존 결과가 있으면 자동으로 다시 요청
+  useEffect(() => {
+    if (hasResult.current) {
+      handleRecommend();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
 
   async function handleRecommend() {
     setLoading(true);
@@ -54,6 +63,7 @@ export default function HomePage() {
       }
 
       setResult(data);
+      hasResult.current = true;
     } catch {
       setError(t("home.errorServer"));
     } finally {
