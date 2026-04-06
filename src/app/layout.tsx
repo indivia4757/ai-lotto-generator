@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI 로또 번호 생성기",
-  description: "8종 알고리즘 기반 로또 번호 추천 시스템",
+  title: "AI 로또 번호 추천",
+  description: "Claude AI 기반 로또 번호 분석 및 추천",
 };
 
 export default function RootLayout({

@@ -1,133 +1,220 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LottoBallSet } from "@/components/lotto/lotto-ball";
-import Link from "next/link";
 
-const ALGORITHMS = [
-  { slug: "frequency", name: "빈도 분석", desc: "핫/콜드 넘버 가중 선택", icon: "📊" },
-  { slug: "neglected", name: "소외 번호", desc: "최근 미출현 번호 우선", icon: "🔍" },
-  { slug: "balanced", name: "균형 조합", desc: "홀짝·고저·구간 균형", icon: "⚖️" },
-  { slug: "consecutive", name: "연번 패턴", desc: "연속번호 출현 확률 반영", icon: "🔗" },
-  { slug: "sum-range", name: "합계 범위", desc: "합계 100~200 범위 제한", icon: "🎯" },
-  { slug: "hybrid", name: "AI 하이브리드", desc: "4가지 분석 앙상블", icon: "🤖" },
-  { slug: "delta", name: "델타 시스템", desc: "번호 간 차이 분포 역산", icon: "📐" },
-  { slug: "random", name: "완전 랜덤", desc: "crypto 기반 순수 랜덤", icon: "🎲" },
-];
+interface AiResult {
+  sets: number[][];
+  analysis: string;
+  reasons: string[];
+  details: {
+    freqTop: { num: number; count: number }[];
+    recentHot: { num: number; count: number }[];
+    neglected: { num: number; gap: number }[];
+    topPairs: { pair: string; count: number }[];
+    avgSum: number;
+    consecutiveRate: number;
+  };
+  targetDraw: number;
+  analyzedDraws: number;
+  generatedAt: string;
+}
 
 export default function HomePage() {
-  const [results, setResults] = useState<{ slug: string; name: string; sets: number[][] } | null>(null);
-  const [loading, setLoading] = useState<string | null>(null);
+  const [result, setResult] = useState<AiResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function generate(slug: string) {
-    setLoading(slug);
+  async function handleRecommend() {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ algorithmSlug: slug, count: 5 }),
-      });
+      const res = await fetch("/api/ai-recommend", { method: "POST" });
       const data = await res.json();
-      setResults({ slug: data.algorithm.slug, name: data.algorithm.name, sets: data.sets });
-    } catch {
-      // 오프라인 fallback
-      const sets: number[][] = [];
-      for (let i = 0; i < 5; i++) {
-        const s = new Set<number>();
-        while (s.size < 6) s.add(Math.floor(Math.random() * 45) + 1);
-        sets.push(Array.from(s).sort((a, b) => a - b));
+
+      if (!res.ok) {
+        setError(data.error || "분석에 실패했습니다.");
+        return;
       }
-      setResults({ slug, name: "오프라인 랜덤", sets });
+
+      setResult(data);
+    } catch {
+      setError("서버에 연결할 수 없습니다.");
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   }
 
   return (
-    <div className="space-y-8">
-      <section className="text-center space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight">AI 로또 번호 생성기</h1>
-        <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          8종 알고리즘으로 분석된 번호를 생성하고, 추천 기록을 관리하세요.
+    <div className="max-w-2xl mx-auto space-y-6">
+      <section className="text-center space-y-3 pt-8">
+        <h1 className="text-4xl font-bold tracking-tight">
+          AI 로또 번호 추천
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          전체 당첨 히스토리를 종합 분석하여
+          <br />
+          최적의 번호 조합을 추천합니다.
         </p>
       </section>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {ALGORITHMS.map((algo) => (
-          <Card key={algo.slug} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <span className="text-xl">{algo.icon}</span>
-                {algo.name}
-              </CardTitle>
-              <CardDescription className="text-xs">{algo.desc}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                className="w-full"
-                size="sm"
-                onClick={() => generate(algo.slug)}
-                disabled={loading !== null}
-              >
-                {loading === algo.slug ? "생성 중..." : "번호 생성"}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl">AI 분석 추천</CardTitle>
+          <CardDescription>
+            빈도, 트렌드, 소외번호, 동반출현, 끝수, 구간균형, 주기성
+            <br />
+            7가지 관점의 종합 앙상블 분석
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center">
+          <Button
+            size="lg"
+            onClick={handleRecommend}
+            disabled={loading}
+            className="px-12 py-6 text-lg"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                분석 중...
+              </span>
+            ) : (
+              "번호 추천 받기"
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
-      {results && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>{results.name} 결과</span>
-              <Link href="/generate">
-                <Button variant="outline" size="sm">상세 설정</Button>
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {results.sets.map((set, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground w-6">#{i + 1}</span>
-                <LottoBallSet numbers={set} />
-                <span className="text-xs text-muted-foreground ml-auto">
-                  합계: {set.reduce((a, b) => a + b, 0)}
-                </span>
-              </div>
-            ))}
+      {error && (
+        <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950">
+          <CardContent className="pt-6 text-center text-red-700 dark:text-red-400">
+            {error}
           </CardContent>
         </Card>
       )}
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Link href="/draws">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+      {result && (
+        <>
+          <Card>
             <CardHeader>
-              <CardTitle className="text-base">📋 당첨 결과</CardTitle>
-              <CardDescription>역대 당첨번호 조회</CardDescription>
+              <CardTitle className="flex items-center justify-between">
+                <span>{result.targetDraw}회차 추천 번호</span>
+                <span className="text-sm font-normal text-muted-foreground">
+                  전체 {result.analyzedDraws}회 분석
+                </span>
+              </CardTitle>
             </CardHeader>
+            <CardContent className="space-y-4">
+              {result.sets.map((set, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground font-mono w-6">
+                    #{i + 1}
+                  </span>
+                  <LottoBallSet numbers={set} />
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    합계: {set.reduce((a, b) => a + b, 0)}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
           </Card>
-        </Link>
-        <Link href="/recommendations">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+
+          <Card>
             <CardHeader>
-              <CardTitle className="text-base">📝 추천 기록</CardTitle>
-              <CardDescription>생성한 번호 관리</CardDescription>
+              <CardTitle className="text-base">분석 요약</CardTitle>
             </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm leading-relaxed">{result.analysis}</p>
+              <div className="space-y-2">
+                {result.reasons.map((reason, i) => (
+                  <div
+                    key={i}
+                    className="text-sm text-muted-foreground flex gap-2"
+                  >
+                    <span className="font-mono text-foreground shrink-0">
+                      #{i + 1}
+                    </span>
+                    <span>{reason}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
           </Card>
-        </Link>
-        <Link href="/stats">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+
+          <Card>
             <CardHeader>
-              <CardTitle className="text-base">📈 통계 분석</CardTitle>
-              <CardDescription>빈도, 패턴, 구간 분석</CardDescription>
+              <CardTitle className="text-base">분석 상세</CardTitle>
             </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <div>
+                <h4 className="font-medium mb-1">
+                  전체 빈도 TOP 10
+                </h4>
+                <p className="text-muted-foreground">
+                  {result.details.freqTop
+                    .map((f) => `${f.num}(${f.count}회)`)
+                    .join(", ")}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-1">
+                  최근 50회 핫 넘버
+                </h4>
+                <p className="text-muted-foreground">
+                  {result.details.recentHot
+                    .map((f) => `${f.num}(${f.count}회)`)
+                    .join(", ")}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-1">
+                  장기 미출현 번호
+                </h4>
+                <p className="text-muted-foreground">
+                  {result.details.neglected
+                    .map((n) => `${n.num}(${n.gap}회 미출현)`)
+                    .join(", ")}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-1">
+                  동반 출현 TOP 쌍
+                </h4>
+                <p className="text-muted-foreground">
+                  {result.details.topPairs
+                    .map((p) => `[${p.pair}]`)
+                    .join(", ")}
+                </p>
+              </div>
+              <div className="flex gap-6">
+                <div>
+                  <h4 className="font-medium mb-1">합계 평균</h4>
+                  <p className="text-muted-foreground">
+                    {result.details.avgSum}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-1">연번 출현율</h4>
+                  <p className="text-muted-foreground">
+                    {result.details.consecutiveRate}%
+                  </p>
+                </div>
+              </div>
+            </CardContent>
           </Card>
-        </Link>
-      </section>
+        </>
+      )}
     </div>
   );
 }

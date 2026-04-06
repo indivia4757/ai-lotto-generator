@@ -7,13 +7,8 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const navItems = [
-  { href: "/", label: "홈" },
-  { href: "/generate", label: "번호 생성" },
+  { href: "/", label: "AI 추천" },
   { href: "/draws", label: "당첨 결과" },
-  { href: "/recipients", label: "추천 대상" },
-  { href: "/recommendations", label: "추천 기록" },
-  { href: "/stats", label: "통계" },
-  { href: "/analysis", label: "CLI 분석" },
 ];
 
 export function Navigation() {
@@ -24,7 +19,6 @@ export function Navigation() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
         <Link href="/" className="mr-6 flex items-center space-x-2 font-bold text-lg">
-          <span>🎱</span>
           <span>AI 로또</span>
         </Link>
 
