@@ -1,6 +1,80 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import type { DrawResult } from "@/lib/db/types";
+import { type Locale, locales } from "@/lib/i18n/translations";
+
+const apiTexts: Record<Locale, {
+  analysisTemplate: string;
+  sumLabel: string;
+  oddEvenLabel: string;
+  acLabel: string;
+  consecutive: string;
+  avgScoreLabel: string;
+  noData: string;
+  drawsLabel: string;
+  topScoreLabel: string;
+  absentLabel: string;
+  avgSumLabel: string;
+  consecutiveRateLabel: string;
+  ensembleLabel: string;
+}> = {
+  ko: {
+    analysisTemplate: "전체 {total}회차 데이터 종합 분석 (시간 가중 적용). 종합 스코어 TOP 5: [{top5}], 장기 미출현: [{neglected}], 전체 합계 평균: {avgSum}, 연번 출현율: {consRate}%. 빈도(20%)+트렌드(20%)+소외회귀(15%)+동반출현(15%)+끝수(10%)+구간균형(10%)+주기성(10%) 7관점 앙상블.",
+    sumLabel: "합계", oddEvenLabel: "홀짝", acLabel: "AC값", consecutive: "연번 포함",
+    avgScoreLabel: "평균 스코어", noData: "당첨 데이터가 없습니다. 먼저 당첨 결과 페이지에서 데이터를 가져와 주세요.",
+    drawsLabel: "회", topScoreLabel: "종합 스코어 TOP 5", absentLabel: "회 미출현",
+    avgSumLabel: "전체 합계 평균", consecutiveRateLabel: "연번 출현율", ensembleLabel: "7관점 앙상블",
+  },
+  en: {
+    analysisTemplate: "Comprehensive analysis of {total} draws (time-weighted). Top 5 scores: [{top5}], Long absent: [{neglected}], Average sum: {avgSum}, Consecutive rate: {consRate}%. Frequency(20%)+Trend(20%)+Regression(15%)+Co-occurrence(15%)+Ending(10%)+Section(10%)+Periodicity(10%) 7-factor ensemble.",
+    sumLabel: "Sum", oddEvenLabel: "Odd/Even", acLabel: "AC", consecutive: "consecutive included",
+    avgScoreLabel: "avg score", noData: "No draw data available. Please import data from the Results page first.",
+    drawsLabel: " draws", topScoreLabel: "Top 5 scores", absentLabel: " draws absent",
+    avgSumLabel: "Average sum", consecutiveRateLabel: "Consecutive rate", ensembleLabel: "7-factor ensemble",
+  },
+  zh: {
+    analysisTemplate: "综合分析{total}期数据（时间加权）。综合得分TOP 5: [{top5}], 长期未出: [{neglected}], 平均合计: {avgSum}, 连号出现率: {consRate}%。频率(20%)+趋势(20%)+回归(15%)+共现(15%)+尾数(10%)+区间(10%)+周期(10%) 7维集成。",
+    sumLabel: "合计", oddEvenLabel: "奇偶", acLabel: "AC值", consecutive: "含连号",
+    avgScoreLabel: "平均得分", noData: "暂无开奖数据。请先在结果页面导入数据。",
+    drawsLabel: "期", topScoreLabel: "综合得分TOP 5", absentLabel: "期未出",
+    avgSumLabel: "平均合计", consecutiveRateLabel: "连号出现率", ensembleLabel: "7维集成",
+  },
+  ja: {
+    analysisTemplate: "全{total}回データ総合分析（時間加重適用）。総合スコアTOP 5: [{top5}], 長期未出現: [{neglected}], 合計平均: {avgSum}, 連番出現率: {consRate}%。頻度(20%)+トレンド(20%)+回帰(15%)+共出現(15%)+末尾(10%)+区間(10%)+周期(10%) 7観点アンサンブル。",
+    sumLabel: "合計", oddEvenLabel: "奇偶", acLabel: "AC値", consecutive: "連番含む",
+    avgScoreLabel: "平均スコア", noData: "当選データがありません。まず結果ページからデータを取得してください。",
+    drawsLabel: "回", topScoreLabel: "総合スコアTOP 5", absentLabel: "回未出現",
+    avgSumLabel: "合計平均", consecutiveRateLabel: "連番出現率", ensembleLabel: "7観点アンサンブル",
+  },
+  es: {
+    analysisTemplate: "Análisis integral de {total} sorteos (ponderación temporal). Top 5 puntuaciones: [{top5}], Ausentes largo plazo: [{neglected}], Suma promedio: {avgSum}, Tasa consecutiva: {consRate}%. Frecuencia(20%)+Tendencia(20%)+Regresión(15%)+Co-ocurrencia(15%)+Terminación(10%)+Sección(10%)+Periodicidad(10%) ensemble 7 factores.",
+    sumLabel: "Suma", oddEvenLabel: "Par/Impar", acLabel: "AC", consecutive: "consecutivos incluidos",
+    avgScoreLabel: "puntuación media", noData: "No hay datos. Importe datos desde la página de resultados.",
+    drawsLabel: " sorteos", topScoreLabel: "Top 5 puntuaciones", absentLabel: " sorteos ausente",
+    avgSumLabel: "Suma promedio", consecutiveRateLabel: "Tasa consecutiva", ensembleLabel: "ensemble 7 factores",
+  },
+  fr: {
+    analysisTemplate: "Analyse complète de {total} tirages (pondération temporelle). Top 5 scores: [{top5}], Absents longue durée: [{neglected}], Somme moyenne: {avgSum}, Taux consécutif: {consRate}%. Fréquence(20%)+Tendance(20%)+Régression(15%)+Co-occurrence(15%)+Terminaison(10%)+Section(10%)+Périodicité(10%) ensemble 7 facteurs.",
+    sumLabel: "Somme", oddEvenLabel: "Pair/Impair", acLabel: "AC", consecutive: "consécutifs inclus",
+    avgScoreLabel: "score moyen", noData: "Aucune donnée. Importez les données depuis la page des résultats.",
+    drawsLabel: " tirages", topScoreLabel: "Top 5 scores", absentLabel: " tirages absent",
+    avgSumLabel: "Somme moyenne", consecutiveRateLabel: "Taux consécutif", ensembleLabel: "ensemble 7 facteurs",
+  },
+  th: {
+    analysisTemplate: "วิเคราะห์ข้อมูล {total} งวด (ถ่วงน้ำหนักเวลา) คะแนนรวม TOP 5: [{top5}], ไม่ออกนาน: [{neglected}], ผลรวมเฉลี่ย: {avgSum}, อัตราเลขต่อเนื่อง: {consRate}% ความถี่(20%)+แนวโน้ม(20%)+การกลับมา(15%)+คู่เลข(15%)+เลขท้าย(10%)+ช่วง(10%)+รอบ(10%) วิเคราะห์ 7 มิติ",
+    sumLabel: "ผลรวม", oddEvenLabel: "คี่/คู่", acLabel: "AC", consecutive: "มีเลขต่อเนื่อง",
+    avgScoreLabel: "คะแนนเฉลี่ย", noData: "ยังไม่มีข้อมูล กรุณานำเข้าข้อมูลจากหน้าผลรางวัลก่อน",
+    drawsLabel: " งวด", topScoreLabel: "คะแนนรวม TOP 5", absentLabel: " งวดไม่ออก",
+    avgSumLabel: "ผลรวมเฉลี่ย", consecutiveRateLabel: "อัตราเลขต่อเนื่อง", ensembleLabel: "วิเคราะห์ 7 มิติ",
+  },
+  vi: {
+    analysisTemplate: "Phân tích tổng hợp {total} kỳ (có trọng số thời gian). Điểm tổng hợp TOP 5: [{top5}], Vắng mặt lâu: [{neglected}], Tổng trung bình: {avgSum}, Tỷ lệ liên tiếp: {consRate}%. Tần suất(20%)+Xu hướng(20%)+Hồi quy(15%)+Đồng xuất hiện(15%)+Đuôi số(10%)+Khu vực(10%)+Chu kỳ(10%) tổng hợp 7 yếu tố.",
+    sumLabel: "Tổng", oddEvenLabel: "Lẻ/Chẵn", acLabel: "AC", consecutive: "có số liên tiếp",
+    avgScoreLabel: "điểm TB", noData: "Chưa có dữ liệu. Vui lòng nhập dữ liệu từ trang kết quả.",
+    drawsLabel: " kỳ", topScoreLabel: "Điểm tổng hợp TOP 5", absentLabel: " kỳ vắng",
+    avgSumLabel: "Tổng trung bình", consecutiveRateLabel: "Tỷ lệ liên tiếp", ensembleLabel: "tổng hợp 7 yếu tố",
+  },
+};
 
 function getNumbers(d: DrawResult): number[] {
   return [d.num1, d.num2, d.num3, d.num4, d.num5, d.num6];
@@ -21,7 +95,7 @@ function calcAC(nums: number[]): number {
  * 전체 회차 종합 스코어 계산
  * 7가지 분석 관점을 모든 데이터에 대해 수행
  */
-function buildScores(draws: DrawResult[]): {
+function buildScores(draws: DrawResult[], locale: Locale = "ko"): {
   scores: number[];
   analysis: string;
   details: {
@@ -233,12 +307,13 @@ function buildScores(draws: DrawResult[]): {
     count: Math.round(count * 10) / 10,
   }));
 
-  const analysis =
-    `전체 ${totalDraws}회차 데이터 종합 분석 (시간 가중 적용). ` +
-    `종합 스코어 TOP 5: [${rankedScores.slice(0, 5).map((n) => n.num).join(", ")}], ` +
-    `장기 미출현: [${neglected.slice(0, 3).map((n) => `${n.num}(${n.gap}회)`).join(", ")}], ` +
-    `전체 합계 평균: ${avgSum}, 연번 출현율: ${consecutiveRate}%. ` +
-    `빈도(20%)+트렌드(20%)+소외회귀(15%)+동반출현(15%)+끝수(10%)+구간균형(10%)+주기성(10%) 7관점 앙상블.`;
+  const txt = apiTexts[locale];
+  const analysis = txt.analysisTemplate
+    .replace("{total}", String(totalDraws))
+    .replace("{top5}", rankedScores.slice(0, 5).map((n) => n.num).join(", "))
+    .replace("{neglected}", neglected.slice(0, 3).map((n) => `${n.num}(${n.gap}${txt.drawsLabel})`).join(", "))
+    .replace("{avgSum}", String(avgSum))
+    .replace("{consRate}", String(consecutiveRate));
 
   return {
     scores,
@@ -311,8 +386,10 @@ function weightedPick(scores: number[]): number[] {
 /** 필터를 통과하는 5세트 생성 */
 function generateSets(
   scores: number[],
-  count: number
+  count: number,
+  locale: Locale = "ko"
 ): { sets: number[][]; reasons: string[] } {
+  const txt = apiTexts[locale];
   const sets: number[][] = [];
   const reasons: string[] = [];
   let attempts = 0;
@@ -336,10 +413,10 @@ function generateSets(
           Math.round((nums.reduce((s, n) => s + scores[n], 0) / 6) * 10) / 10;
 
         reasons.push(
-          `합계 ${sum}, 홀짝 ${oddCount}:${6 - oddCount}, ` +
-            `AC값 ${calcAC(nums)}, ` +
-            (hasConsecutive ? "연번 포함, " : "") +
-            `평균 스코어 ${avgScore}점`
+          `${txt.sumLabel} ${sum}, ${txt.oddEvenLabel} ${oddCount}:${6 - oddCount}, ` +
+            `${txt.acLabel} ${calcAC(nums)}, ` +
+            (hasConsecutive ? `${txt.consecutive}, ` : "") +
+            `${txt.avgScoreLabel} ${avgScore}`
         );
       }
     }
@@ -348,23 +425,30 @@ function generateSets(
   return { sets, reasons };
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  let locale: Locale = "ko";
+  try {
+    const body = await request.json();
+    if (body.locale && locales.includes(body.locale)) {
+      locale = body.locale;
+    }
+  } catch {
+    // no body, default to ko
+  }
+
   const draws = db
     .prepare("SELECT * FROM draw_results ORDER BY draw_no DESC")
     .all() as DrawResult[];
 
   if (draws.length === 0) {
     return NextResponse.json(
-      {
-        error:
-          "당첨 데이터가 없습니다. 먼저 당첨 결과 페이지에서 데이터를 가져와 주세요.",
-      },
+      { error: apiTexts[locale].noData },
       { status: 400 }
     );
   }
 
-  const { scores, analysis, details } = buildScores(draws);
-  const { sets, reasons } = generateSets(scores, 5);
+  const { scores, analysis, details } = buildScores(draws, locale);
+  const { sets, reasons } = generateSets(scores, 5, locale);
   const nextDrawNo = draws[0].draw_no + 1;
 
   return NextResponse.json({

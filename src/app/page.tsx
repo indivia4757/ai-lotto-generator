@@ -30,7 +30,7 @@ interface AiResult {
 }
 
 export default function HomePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [result, setResult] = useState<AiResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,11 @@ export default function HomePage() {
     setResult(null);
 
     try {
-      const res = await fetch("/api/ai-recommend", { method: "POST" });
+      const res = await fetch("/api/ai-recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale }),
+      });
       const data = await res.json();
 
       if (!res.ok) {
